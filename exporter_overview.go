@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -40,9 +41,12 @@ var (
 type exporterOverview struct {
 	overviewMetrics map[string]*prometheus.GaugeVec
 	nodeInfo        NodeInfo
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-//NodeInfo presents the name and version of fetched rabbitmq
+// NodeInfo presents the name and version of fetched rabbitmq
 type NodeInfo struct {
 	Node            string
 	RabbitmqVersion string
@@ -51,7 +55,7 @@ type NodeInfo struct {
 	TotalQueues     int
 }
 
-func newExporterOverview() *exporterOverview {
+func newExporterOverview(client *http.Client, config *RabbitExporterConfig) *exporterOverview {
 	overviewMetricDescriptionActual := overviewMetricDescription
 
 	if len(config.ExcludeMetrics) > 0 {
@@ -65,6 +69,8 @@ func newExporterOverview() *exporterOverview {
 	return &exporterOverview{
 		overviewMetrics: overviewMetricDescriptionActual,
 		nodeInfo:        NodeInfo{},
+		config:          config,
+		client:          client,
 	}
 }
 
@@ -73,7 +79,7 @@ func (e exporterOverview) NodeInfo() NodeInfo {
 }
 
 func (e *exporterOverview) Collect(ctx context.Context, ch chan<- prometheus.Metric) error {
-	body, contentType, err := apiRequest(config, "overview")
+	body, contentType, err := apiRequest(e.client, *e.config, "overview")
 	if err != nil {
 		return err
 	}

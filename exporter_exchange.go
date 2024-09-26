@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -31,9 +32,12 @@ var (
 
 type exporterExchange struct {
 	exchangeMetrics map[string]*prometheus.Desc
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterExchange() Exporter {
+func newExporterExchange(client *http.Client, config *RabbitExporterConfig) Exporter {
 	exchangeCounterVecActual := exchangeCounterVec
 
 	if len(config.ExcludeMetrics) > 0 {
@@ -46,11 +50,13 @@ func newExporterExchange() Exporter {
 
 	return exporterExchange{
 		exchangeMetrics: exchangeCounterVecActual,
+		config:          config,
+		client:          client,
 	}
 }
 
 func (e exporterExchange) Collect(ctx context.Context, ch chan<- prometheus.Metric) error {
-	exchangeData, err := getStatsInfo(config, "exchanges", exchangeLabelKeys)
+	exchangeData, err := getStatsInfo(e.client, *e.config, "exchanges", exchangeLabelKeys)
 
 	if err != nil {
 		return err
@@ -64,16 +70,16 @@ func (e exporterExchange) Collect(ctx context.Context, ch chan<- prometheus.Metr
 		for _, exchange := range exchangeData {
 			ename := exchange.labels["name"]
 			vname := exchange.labels["vhost"]
-			if vhostIncluded := config.IncludeVHost.MatchString(vname); !vhostIncluded {
+			if vhostIncluded := e.config.IncludeVHost.MatchString(vname); !vhostIncluded {
 				continue
 			}
-			if skipVhost := config.SkipVHost.MatchString(vname); skipVhost {
+			if skipVhost := e.config.SkipVHost.MatchString(vname); skipVhost {
 				continue
 			}
-			if exchangeIncluded := config.IncludeExchanges.MatchString(ename); !exchangeIncluded {
+			if exchangeIncluded := e.config.IncludeExchanges.MatchString(ename); !exchangeIncluded {
 				continue
 			}
-			if exchangeSkipped := config.SkipExchanges.MatchString(ename); exchangeSkipped {
+			if exchangeSkipped := e.config.SkipExchanges.MatchString(ename); exchangeSkipped {
 				continue
 			}
 			if value, ok := exchange.metrics[key]; ok {

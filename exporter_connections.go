@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -28,9 +29,12 @@ var (
 type exporterConnections struct {
 	connectionMetricsG map[string]*prometheus.GaugeVec
 	stateMetric        *prometheus.GaugeVec
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterConnections() Exporter {
+func newExporterConnections(client *http.Client, config *RabbitExporterConfig) Exporter {
 	connectionGaugeVecActual := connectionGaugeVec
 
 	if len(config.ExcludeMetrics) > 0 {
@@ -44,11 +48,13 @@ func newExporterConnections() Exporter {
 	return exporterConnections{
 		connectionMetricsG: connectionGaugeVecActual,
 		stateMetric:        newGaugeVec("connection_status", "Number of connections in a certain state aggregated per label combination.", connectionLabelsStateMetric),
+		config:             config,
+		client:             client,
 	}
 }
 
 func (e exporterConnections) Collect(ctx context.Context, ch chan<- prometheus.Metric) error {
-	rabbitConnectionResponses, err := getStatsInfo(config, "connections", connectionLabelKeys)
+	rabbitConnectionResponses, err := getStatsInfo(e.client, *e.config, "connections", connectionLabelKeys)
 
 	if err != nil {
 		return err
@@ -70,14 +76,14 @@ func (e exporterConnections) Collect(ctx context.Context, ch chan<- prometheus.M
 	for key, gauge := range e.connectionMetricsG {
 		for _, connD := range rabbitConnectionResponses {
 			if value, ok := connD.metrics[key]; ok {
-				self := selfLabel(config, connD.labels["node"] == selfNode)
+				self := selfLabel(*e.config, connD.labels["node"] == selfNode)
 				gauge.WithLabelValues(cluster, connD.labels["vhost"], connD.labels["node"], connD.labels["peer_host"], connD.labels["user"], self).Add(value)
 			}
 		}
 	}
 
 	for _, connD := range rabbitConnectionResponses {
-		self := selfLabel(config, connD.labels["node"] == selfNode)
+		self := selfLabel(*e.config, connD.labels["node"] == selfNode)
 		e.stateMetric.WithLabelValues(cluster, connD.labels["vhost"], connD.labels["node"], connD.labels["peer_host"], connD.labels["user"], connD.labels["state"], self).Add(1)
 	}
 

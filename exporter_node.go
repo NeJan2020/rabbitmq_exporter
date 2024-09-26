@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -33,9 +34,12 @@ var (
 
 type exporterNode struct {
 	nodeMetricsGauge map[string]*prometheus.GaugeVec
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterNode() Exporter {
+func newExporterNode(client *http.Client, config *RabbitExporterConfig) Exporter {
 	nodeGaugeVecActual := nodeGaugeVec
 
 	if len(config.ExcludeMetrics) > 0 {
@@ -48,6 +52,8 @@ func newExporterNode() Exporter {
 
 	return exporterNode{
 		nodeMetricsGauge: nodeGaugeVecActual,
+		config:           config,
+		client:           client,
 	}
 }
 
@@ -61,7 +67,7 @@ func (e exporterNode) Collect(ctx context.Context, ch chan<- prometheus.Metric) 
 		cluster = n
 	}
 
-	nodeData, err := getStatsInfo(config, "nodes", nodeLabelKeys)
+	nodeData, err := getStatsInfo(e.client, *e.config, "nodes", nodeLabelKeys)
 
 	if err != nil {
 		return err
@@ -74,7 +80,7 @@ func (e exporterNode) Collect(ctx context.Context, ch chan<- prometheus.Metric) 
 	for key, gauge := range e.nodeMetricsGauge {
 		for _, node := range nodeData {
 			if value, ok := node.metrics[key]; ok {
-				self := selfLabel(config, node.labels["name"] == selfNode)
+				self := selfLabel(*e.config, node.labels["name"] == selfNode)
 				gauge.WithLabelValues(cluster, node.labels["name"], self).Set(value)
 			}
 		}

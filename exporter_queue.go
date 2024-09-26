@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -72,9 +73,12 @@ type exporterQueue struct {
 	queueMetricsCounter map[string]*prometheus.Desc
 	stateMetric         *prometheus.GaugeVec
 	idleSinceMetric     *prometheus.GaugeVec
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterQueue() Exporter {
+func newExporterQueue(client *http.Client, config *RabbitExporterConfig) Exporter {
 	queueGaugeVecActual := queueGaugeVec
 	queueCounterVecActual := queueCounterVec
 	litmitsGaugeVecActual := limitsGaugeVec
@@ -99,6 +103,8 @@ func newExporterQueue() Exporter {
 		queueMetricsCounter: queueCounterVecActual,
 		stateMetric:         newGaugeVec("queue_state", "A metric with a value of constant '1' if the queue is in a certain state", append(queueLabels, "state")),
 		idleSinceMetric:     newGaugeVec("queue_idle_since_seconds", "starttime where the queue switched to idle state; in seconds since epoch (1970).", queueLabels),
+		config:              config,
+		client:              client,
 	}
 }
 
@@ -132,16 +138,16 @@ func (e exporterQueue) Collect(ctx context.Context, ch chan<- prometheus.Metric)
 	e.stateMetric.Reset()
 	e.idleSinceMetric.Reset()
 
-	if config.MaxQueues > 0 {
+	if e.config.MaxQueues > 0 {
 		// Get overview info to check total queues
 		totalQueues, ok := ctx.Value(totalQueues).(int)
 		if !ok {
 			return errors.New("total Queue counter missing")
 		}
 
-		if totalQueues > config.MaxQueues {
+		if totalQueues > e.config.MaxQueues {
 			log.WithFields(log.Fields{
-				"MaxQueues":   config.MaxQueues,
+				"MaxQueues":   e.config.MaxQueues,
 				"TotalQueues": totalQueues,
 			}).Debug("MaxQueues exceeded.")
 			return nil
@@ -157,7 +163,7 @@ func (e exporterQueue) Collect(ctx context.Context, ch chan<- prometheus.Metric)
 		cluster = n
 	}
 
-	rabbitMqQueueData, err := getStatsInfo(config, "queues", queueLabelKeys)
+	rabbitMqQueueData, err := getStatsInfo(e.client, *e.config, "queues", queueLabelKeys)
 	if err != nil {
 		return err
 	}
@@ -166,20 +172,20 @@ func (e exporterQueue) Collect(ctx context.Context, ch chan<- prometheus.Metric)
 	for _, queue := range rabbitMqQueueData {
 		qname := queue.labels["name"]
 		vname := queue.labels["vhost"]
-		if vhostIncluded := config.IncludeVHost.MatchString(vname); !vhostIncluded {
+		if vhostIncluded := e.config.IncludeVHost.MatchString(vname); !vhostIncluded {
 			continue
 		}
-		if skipVhost := config.SkipVHost.MatchString(vname); skipVhost {
+		if skipVhost := e.config.SkipVHost.MatchString(vname); skipVhost {
 			continue
 		}
-		if queueIncluded := config.IncludeQueues.MatchString(qname); !queueIncluded {
+		if queueIncluded := e.config.IncludeQueues.MatchString(qname); !queueIncluded {
 			continue
 		}
-		if queueSkipped := config.SkipQueues.MatchString(qname); queueSkipped {
+		if queueSkipped := e.config.SkipQueues.MatchString(qname); queueSkipped {
 			continue
 		}
 
-		self := selfLabel(config, queue.labels["node"] == selfNode)
+		self := selfLabel(*e.config, queue.labels["node"] == selfNode)
 		labelValues := []string{cluster, queue.labels["vhost"], queue.labels["name"], queue.labels["durable"], queue.labels["policy"], self}
 
 		for key, gaugevec := range e.queueMetricsGauge {

@@ -19,7 +19,7 @@ const (
 	defaultLogLevel = log.InfoLevel
 )
 
-func initLogger() {
+func initLogger(config *RabbitExporterConfig) {
 	log.SetLevel(getLogLevel())
 	if strings.ToUpper(config.OutputFormat) == "JSON" {
 		log.SetFormatter(&log.JSONFormatter{})
@@ -39,16 +39,17 @@ func main() {
 		return
 	}
 
-	err := initConfigFromFile(*configFile)                  //Try parsing config file
+	var config *RabbitExporterConfig
+
+	config, err := initConfigFromFile(*configFile)          //Try parsing config file
 	if _, isPathError := err.(*os.PathError); isPathError { // No file => use environment variables
-		initConfig()
+		config = initConfig()
 	} else if err != nil {
 		panic(err)
 	}
 
-	initLogger()
-	initClient()
-	exporter := newExporter()
+	initLogger(config)
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 
 	log.WithFields(log.Fields{

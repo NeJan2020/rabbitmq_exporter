@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -19,18 +20,23 @@ var (
 
 type exporterShovel struct {
 	stateMetric *prometheus.GaugeVec
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterShovel() Exporter {
+func newExporterShovel(client *http.Client, config *RabbitExporterConfig) Exporter {
 	return exporterShovel{
 		stateMetric: newGaugeVec("shovel_state", "A metric with a value of constant '1' for each shovel in a certain state", shovelLabels),
+		config:      config,
+		client:      client,
 	}
 }
 
 func (e exporterShovel) Collect(ctx context.Context, ch chan<- prometheus.Metric) error {
 	e.stateMetric.Reset()
 
-	shovelData, err := getStatsInfo(config, "shovels", shovelLabelKeys)
+	shovelData, err := getStatsInfo(e.client, *e.config, "shovels", shovelLabelKeys)
 	if err != nil {
 		return err
 	}
@@ -45,7 +51,7 @@ func (e exporterShovel) Collect(ctx context.Context, ch chan<- prometheus.Metric
 	}
 
 	for _, shovel := range shovelData {
-		self := selfLabel(config, shovel.labels["node"] == selfNode)
+		self := selfLabel(*e.config, shovel.labels["node"] == selfNode)
 		e.stateMetric.WithLabelValues(cluster, shovel.labels["vhost"], shovel.labels["name"], shovel.labels["type"], self, shovel.labels["state"]).Set(1)
 	}
 

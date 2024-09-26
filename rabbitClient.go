@@ -13,9 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var client = &http.Client{Timeout: 15 * time.Second} //default client for test. Client is initialized in initClient()
-
-func initClient() {
+func initClient(config *RabbitExporterConfig) *http.Client {
 	var roots *x509.CertPool
 
 	if data, err := ioutil.ReadFile(config.CAFile); err == nil {
@@ -54,14 +52,13 @@ func initClient() {
 		}
 	}
 
-	client = &http.Client{
+	return &http.Client{
 		Transport: tr,
 		Timeout:   time.Duration(config.Timeout) * time.Second,
 	}
-
 }
 
-func apiRequest(config rabbitExporterConfig, endpoint string) ([]byte, string, error) {
+func apiRequest(client *http.Client, config RabbitExporterConfig, endpoint string) ([]byte, string, error) {
 	var args string
 	enabled, exists := config.RabbitCapabilities[rabbitCapNoSort]
 	if enabled && exists {
@@ -104,18 +101,18 @@ func apiRequest(config rabbitExporterConfig, endpoint string) ([]byte, string, e
 	return body, content, nil
 }
 
-func loadMetrics(config rabbitExporterConfig, endpoint string) (RabbitReply, error) {
-	body, content, err := apiRequest(config, endpoint)
+func loadMetrics(client *http.Client, config RabbitExporterConfig, endpoint string) (RabbitReply, error) {
+	body, content, err := apiRequest(client, config, endpoint)
 	if err != nil {
 		return nil, err
 	}
 	return MakeReply(content, body)
 }
 
-func getStatsInfo(config rabbitExporterConfig, apiEndpoint string, labels []string) ([]StatsInfo, error) {
+func getStatsInfo(client *http.Client, config RabbitExporterConfig, apiEndpoint string, labels []string) ([]StatsInfo, error) {
 	var q []StatsInfo
 
-	reply, err := loadMetrics(config, apiEndpoint)
+	reply, err := loadMetrics(client, config, apiEndpoint)
 	if err != nil {
 		return q, err
 	}
@@ -125,10 +122,10 @@ func getStatsInfo(config rabbitExporterConfig, apiEndpoint string, labels []stri
 	return q, nil
 }
 
-func getMetricMap(config rabbitExporterConfig, apiEndpoint string) (MetricMap, error) {
+func getMetricMap(client *http.Client, config RabbitExporterConfig, apiEndpoint string) (MetricMap, error) {
 	var overview MetricMap
 
-	body, content, err := apiRequest(config, apiEndpoint)
+	body, content, err := apiRequest(client, config, apiEndpoint)
 	if err != nil {
 		return overview, err
 	}
@@ -141,7 +138,7 @@ func getMetricMap(config rabbitExporterConfig, apiEndpoint string) (MetricMap, e
 	return reply.MakeMap(), nil
 }
 
-func acceptContentType(config rabbitExporterConfig) string {
+func acceptContentType(config RabbitExporterConfig) string {
 	if isCapEnabled(config, rabbitCapBert) {
 		return "application/bert, application/json;q=0.1"
 	}

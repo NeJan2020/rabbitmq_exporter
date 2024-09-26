@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -130,9 +131,12 @@ var (
 
 type exporterMemory struct {
 	memoryMetricsGauge map[string]*prometheus.GaugeVec
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterMemory() Exporter {
+func newExporterMemory(client *http.Client, config *RabbitExporterConfig) Exporter {
 	memoryGaugeVecActual := memoryGaugeVec
 
 	if len(config.ExcludeMetrics) > 0 {
@@ -145,6 +149,8 @@ func newExporterMemory() Exporter {
 
 	return exporterMemory{
 		memoryMetricsGauge: memoryGaugeVecActual,
+		config:             config,
+		client:             client,
 	}
 }
 
@@ -161,14 +167,14 @@ func (e exporterMemory) Collect(ctx context.Context, ch chan<- prometheus.Metric
 		cluster = n
 	}
 
-	nodeData, err := getStatsInfo(config, "nodes", nodeLabelKeys)
+	nodeData, err := getStatsInfo(e.client, *e.config, "nodes", nodeLabelKeys)
 	if err != nil {
 		return err
 	}
 
 	for _, node := range nodeData {
-		self := selfLabel(config, node.labels["name"] == selfNode)
-		rabbitMemoryResponses, err := getMetricMap(config, fmt.Sprintf("nodes/%s/memory", node.labels["name"]))
+		self := selfLabel(*e.config, node.labels["name"] == selfNode)
+		rabbitMemoryResponses, err := getMetricMap(e.client, *e.config, fmt.Sprintf("nodes/%s/memory", node.labels["name"]))
 		if err != nil {
 			return err
 		}

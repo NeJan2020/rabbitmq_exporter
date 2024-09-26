@@ -73,9 +73,9 @@ func TestWholeApp(t *testing.T) {
 	defer os.Unsetenv("SKIP_QUEUES")
 	os.Setenv("RABBIT_CAPABILITIES", " ")
 	defer os.Unsetenv("RABBIT_CAPABILITIES")
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -128,10 +128,10 @@ func TestWholeAppInverted(t *testing.T) {
 	defer os.Unsetenv("SKIP_QUEUES")
 	os.Setenv("RABBIT_CAPABILITIES", " ")
 	defer os.Unsetenv("RABBIT_CAPABILITIES")
-	initConfig()
+	config := initConfig()
 	config.EnabledExporters = []string{"connections"}
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -180,9 +180,9 @@ func TestAppMaxQueues(t *testing.T) {
 	defer os.Unsetenv("MAX_QUEUES")
 	os.Setenv("RABBIT_CAPABILITIES", " ")
 	defer os.Unsetenv("RABBIT_CAPABILITIES")
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -226,9 +226,9 @@ func TestRabbitError(t *testing.T) {
 	server := createTestserver(500, http.StatusText(500))
 	defer server.Close()
 	os.Setenv("RABBIT_URL", server.URL)
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -246,7 +246,7 @@ func TestRabbitError(t *testing.T) {
 	}
 }
 
-//TestResetMetricsOnRabbitFailure verifies the behaviour of the exporter if the rabbitmq fails after one successfull retrieval of the data
+// TestResetMetricsOnRabbitFailure verifies the behaviour of the exporter if the rabbitmq fails after one successfull retrieval of the data
 // List of metrics should be empty except rabbitmq_up{cluster="my-rabbit@ae74c041248b",node="my-rabbit@ae74c041248b"} should be 0
 func TestResetMetricsOnRabbitFailure(t *testing.T) {
 	rabbitUP := true
@@ -287,9 +287,9 @@ func TestResetMetricsOnRabbitFailure(t *testing.T) {
 	os.Setenv("RABBIT_EXPORTERS", "exchange,node,overview,queue,connections")
 	defer os.Unsetenv("RABBIT_EXPORTERS")
 
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -427,7 +427,7 @@ func TestResetMetricsOnRabbitFailure(t *testing.T) {
 	t.Run("RabbitMQ is using loadbalancer -> self is always 1", func(t *testing.T) {
 		rabbitUP = true
 		rabbitQueuesUp = true
-        config.RabbitConnection = "loadbalancer"
+		config.RabbitConnection = "loadbalancer"
 		req, _ := http.NewRequest("GET", "", nil)
 		w := httptest.NewRecorder()
 		promhttp.Handler().ServeHTTP(w, req)
@@ -446,14 +446,14 @@ func TestResetMetricsOnRabbitFailure(t *testing.T) {
 func TestExporter(t *testing.T) {
 	tests := []struct {
 		name       string
-		setup      func()
+		setup      func(*RabbitExporterConfig)
 		expect     []string
 		dontExpect []string
 		lines      int
 	}{
 		{
 			name:  "Base",
-			setup: func() {},
+			setup: func(*RabbitExporterConfig) {},
 			expect: []string{
 				`rabbitmq_queue_messages_ready{cluster="my-rabbit@ae74c041248b",durable="true",policy="",queue="myQueue1",self="1",vhost="/"} 6`,
 				`rabbitmq_queue_messages_ready{cluster="my-rabbit@ae74c041248b",durable="true",policy="",queue="myQueue3",self="1",vhost="/"} 23`,
@@ -465,7 +465,7 @@ func TestExporter(t *testing.T) {
 		},
 		{
 			name: "Include specific queue",
-			setup: func() {
+			setup: func(config *RabbitExporterConfig) {
 				config.IncludeQueues = regexp.MustCompile("myQueue3")
 				//config.SkipQueues = regexp.MustCompile(".*")
 			},
@@ -480,7 +480,7 @@ func TestExporter(t *testing.T) {
 		},
 		{
 			name: "IncludeQueues (Substring)",
-			setup: func() {
+			setup: func(config *RabbitExporterConfig) {
 				config.IncludeQueues = regexp.MustCompile("Queue")
 				//config.SkipQueues = regexp.MustCompile(".*")
 			},
@@ -494,7 +494,7 @@ func TestExporter(t *testing.T) {
 		},
 		{
 			name: "Skip queues (Substring)",
-			setup: func() {
+			setup: func(config *RabbitExporterConfig) {
 				// config.IncludeQueues = regexp.MustCompile("Queue")
 				config.SkipQueues = regexp.MustCompile("[34]")
 			},
@@ -513,7 +513,7 @@ func TestExporter(t *testing.T) {
 		},
 		{
 			name: "Include specific exchange",
-			setup: func() {
+			setup: func(config *RabbitExporterConfig) {
 				config.IncludeExchanges = regexp.MustCompile("^myExchange$")
 			},
 			expect: []string{
@@ -527,7 +527,7 @@ func TestExporter(t *testing.T) {
 		},
 		{
 			name: "IncludeExchanges (Substring)",
-			setup: func() {
+			setup: func(config *RabbitExporterConfig) {
 				config.IncludeExchanges = regexp.MustCompile("Exchange")
 			},
 			expect: []string{
@@ -540,7 +540,7 @@ func TestExporter(t *testing.T) {
 		},
 		{
 			name: "Skip exchanges (Substring)",
-			setup: func() {
+			setup: func(config *RabbitExporterConfig) {
 				config.SkipExchanges = regexp.MustCompile("[3-4]")
 			},
 			expect: []string{
@@ -559,11 +559,11 @@ func TestExporter(t *testing.T) {
 			server := setupServer(t, overviewTestData, queuesTestData, exchangeAPIResponse, nodesAPIResponse, connectionAPIResponse)
 			defer server.Close()
 
-			initConfig()
+			config := initConfig()
 			config.RabbitURL = server.URL
-			tt.setup()
+			tt.setup(config)
 
-			exporter := newExporter()
+			exporter := NewExporter(config)
 			prometheus.MustRegister(exporter)
 			defer prometheus.Unregister(exporter)
 
@@ -600,9 +600,9 @@ func TestQueueState(t *testing.T) {
 	defer os.Unsetenv("RABBIT_CAPABILITIES")
 	os.Setenv("RABBIT_EXPORTERS", "queue,connections")
 	defer os.Unsetenv("RABBIT_EXPORTERS")
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -642,9 +642,9 @@ func TestQueueLength(t *testing.T) {
 	defer os.Unsetenv("RABBIT_CAPABILITIES")
 	os.Setenv("RABBIT_EXPORTERS", "queue")
 	defer os.Unsetenv("RABBIT_EXPORTERS")
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -704,9 +704,9 @@ func TestShovel(t *testing.T) {
 	os.Setenv("RABBIT_EXPORTERS", "exchange,node,overview,queue,connections,shovel")
 	defer os.Unsetenv("RABBIT_EXPORTERS")
 
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 
@@ -791,9 +791,9 @@ func TestFederation(t *testing.T) {
 	os.Setenv("RABBIT_EXPORTERS", "exchange,node,overview,queue,connections,federation")
 	defer os.Unsetenv("RABBIT_EXPORTERS")
 
-	initConfig()
+	config := initConfig()
 
-	exporter := newExporter()
+	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 	defer prometheus.Unregister(exporter)
 

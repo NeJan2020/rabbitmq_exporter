@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	config        rabbitExporterConfig
-	defaultConfig = rabbitExporterConfig{
+	defaultConfig = RabbitExporterConfig{
 		RabbitURL:          "http://127.0.0.1:15672",
 		RabbitUsername:     "guest",
 		RabbitPassword:     "guest",
@@ -40,7 +39,7 @@ var (
 	}
 )
 
-type rabbitExporterConfig struct {
+type RabbitExporterConfig struct {
 	RabbitURL                string              `json:"rabbit_url"`
 	RabbitUsername           string              `json:"rabbit_user"`
 	RabbitPassword           string              `json:"rabbit_pass"`
@@ -86,11 +85,11 @@ var allRabbitCapabilities = rabbitCapabilitySet{
 	rabbitCapBert:   true,
 }
 
-func initConfigFromFile(configFile string) error {
-	config = rabbitExporterConfig{}
+func initConfigFromFile(configFile string) (*RabbitExporterConfig, error) {
+	config := RabbitExporterConfig{}
 	err := gonfig.GetConf(configFile, &config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if url := config.RabbitURL; url != "" {
@@ -106,11 +105,11 @@ func initConfigFromFile(configFile string) error {
 	config.SkipVHost = regexp.MustCompile(config.SkipVHostString)
 	config.IncludeVHost = regexp.MustCompile(config.IncludeVHostString)
 	config.RabbitCapabilities = parseCapabilities(config.RabbitCapabilitiesString)
-	return nil
+	return &config, nil
 }
 
-func initConfig() {
-	config = defaultConfig
+func initConfig() *RabbitExporterConfig {
+	config := defaultConfig
 	if url := os.Getenv("RABBIT_URL"); url != "" {
 		if valid, _ := regexp.MatchString("https?://[a-zA-Z.0-9]+", strings.ToLower(url)); valid {
 			config.RabbitURL = url
@@ -242,6 +241,8 @@ func initConfig() {
 		}
 		config.MaxQueues = m
 	}
+
+	return &config
 }
 
 func parseCapabilities(raw string) rabbitCapabilitySet {
@@ -257,15 +258,15 @@ func parseCapabilities(raw string) rabbitCapabilitySet {
 	return result
 }
 
-func isCapEnabled(config rabbitExporterConfig, cap rabbitCapability) bool {
+func isCapEnabled(config RabbitExporterConfig, cap rabbitCapability) bool {
 	exists, enabled := config.RabbitCapabilities[cap]
 	return exists && enabled
 }
 
-func selfLabel(config rabbitExporterConfig, isSelf bool) string {
+func selfLabel(config RabbitExporterConfig, isSelf bool) string {
 	if config.RabbitConnection == "loadbalancer" {
-        return "lb"
-    } else if isSelf {
+		return "lb"
+	} else if isSelf {
 		return "1"
 	} else {
 		return "0"

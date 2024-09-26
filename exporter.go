@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 
 var (
 	exportersMu       sync.RWMutex
-	exporterFactories = make(map[string]func() Exporter)
+	exporterFactories = make(map[string]func(*http.Client, *RabbitExporterConfig) Exporter)
 )
 
 type contextValues string
@@ -24,8 +25,8 @@ const (
 	totalQueues            contextValues = "totalQueues"
 )
 
-//RegisterExporter makes an exporter available by the provided name.
-func RegisterExporter(name string, f func() Exporter) {
+// RegisterExporter makes an exporter available by the provided name.
+func RegisterExporter(name string, f func(*http.Client, *RabbitExporterConfig) Exporter) {
 	exportersMu.Lock()
 	defer exportersMu.Unlock()
 	if f == nil {
@@ -34,7 +35,7 @@ func RegisterExporter(name string, f func() Exporter) {
 	exporterFactories[name] = f
 }
 
-type exporter struct {
+type RabbitMQExporter struct {
 	mutex                        sync.RWMutex
 	upMetric                     *prometheus.GaugeVec
 	endpointUpMetric             *prometheus.GaugeVec
@@ -44,37 +45,38 @@ type exporter struct {
 	lastScrapeOK                 bool
 }
 
-//Exporter interface for prometheus metrics. Collect is fetching the data and therefore can return an error
+// Exporter interface for prometheus metrics. Collect is fetching the data and therefore can return an error
 type Exporter interface {
 	Collect(ctx context.Context, ch chan<- prometheus.Metric) error
 	Describe(ch chan<- *prometheus.Desc)
 }
 
-func newExporter() *exporter {
+func NewExporter(config *RabbitExporterConfig) *RabbitMQExporter {
+	client := initClient(config)
 	enabledExporter := make(map[string]Exporter)
 	for _, e := range config.EnabledExporters {
 		if _, ok := exporterFactories[e]; ok {
-			enabledExporter[e] = exporterFactories[e]()
+			enabledExporter[e] = exporterFactories[e](client, config)
 		}
 	}
 
-	return &exporter{
+	return &RabbitMQExporter{
 		upMetric:                     newGaugeVec("up", "Was the last scrape of rabbitmq successful.", []string{"cluster", "node"}),
 		endpointUpMetric:             newGaugeVec("module_up", "Was the last scrape of rabbitmq successful per module.", []string{"cluster", "node", "module"}),
 		endpointScrapeDurationMetric: newGaugeVec("module_scrape_duration_seconds", "Duration of the last scrape in seconds", []string{"cluster", "node", "module"}),
 		exporter:                     enabledExporter,
-		overviewExporter:             newExporterOverview(),
+		overviewExporter:             newExporterOverview(client, config),
 		lastScrapeOK:                 true, //return true after start. Value will be updated with each scraping
 	}
 }
 
-func (e *exporter) LastScrapeOK() bool {
+func (e *RabbitMQExporter) LastScrapeOK() bool {
 	e.mutex.Lock() // To protect metrics from concurrent collects.
 	defer e.mutex.Unlock()
 	return e.lastScrapeOK
 }
 
-func (e *exporter) Describe(ch chan<- *prometheus.Desc) {
+func (e *RabbitMQExporter) Describe(ch chan<- *prometheus.Desc) {
 
 	e.overviewExporter.Describe(ch)
 	for _, ex := range e.exporter {
@@ -87,7 +89,7 @@ func (e *exporter) Describe(ch chan<- *prometheus.Desc) {
 	BuildInfo.Describe(ch)
 }
 
-func (e *exporter) Collect(ch chan<- prometheus.Metric) {
+func (e *RabbitMQExporter) Collect(ch chan<- prometheus.Metric) {
 	e.mutex.Lock() // To protect metrics from concurrent collects.
 	defer e.mutex.Unlock()
 
@@ -129,7 +131,7 @@ func (e *exporter) Collect(ch chan<- prometheus.Metric) {
 
 }
 
-func (e *exporter) collectWithDuration(ex Exporter, name string, ch chan<- prometheus.Metric) error {
+func (e *RabbitMQExporter) collectWithDuration(ex Exporter, name string, ch chan<- prometheus.Metric) error {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, endpointScrapeDuration, e.endpointScrapeDurationMetric)
 	ctx = context.WithValue(ctx, endpointUpMetric, e.endpointUpMetric)

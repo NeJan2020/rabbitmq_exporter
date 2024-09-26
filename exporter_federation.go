@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -17,18 +18,23 @@ var (
 
 type exporterFederation struct {
 	stateMetric *prometheus.GaugeVec
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
-func newExporterFederation() Exporter {
+func newExporterFederation(client *http.Client, config *RabbitExporterConfig) Exporter {
 	return exporterFederation{
 		stateMetric: newGaugeVec("federation_state", "A metric with a value of constant '1' for each federation in a certain state", federationLabels),
+		config:      config,
+		client:      client,
 	}
 }
 
 func (e exporterFederation) Collect(ctx context.Context, ch chan<- prometheus.Metric) error {
 	e.stateMetric.Reset()
 
-	federationData, err := getStatsInfo(config, "federation-links", federationLabelsKeys)
+	federationData, err := getStatsInfo(e.client, *e.config, "federation-links", federationLabelsKeys)
 	if err != nil {
 		return err
 	}
@@ -43,7 +49,7 @@ func (e exporterFederation) Collect(ctx context.Context, ch chan<- prometheus.Me
 	}
 
 	for _, federation := range federationData {
-		self := selfLabel(config, federation.labels["node"] == selfNode)
+		self := selfLabel(*e.config, federation.labels["node"] == selfNode)
 		e.stateMetric.WithLabelValues(cluster, federation.labels["vhost"], federation.labels["node"], federation.labels["queue"], federation.labels["exchange"], self, federation.labels["status"]).Set(1)
 	}
 

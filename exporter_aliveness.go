@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -30,6 +31,9 @@ var (
 type exporterAliveness struct {
 	alivenessMetrics map[string]*prometheus.GaugeVec
 	alivenessInfo    AlivenessInfo
+
+	config *RabbitExporterConfig
+	client *http.Client
 }
 
 type AlivenessInfo struct {
@@ -38,7 +42,7 @@ type AlivenessInfo struct {
 	Reason string
 }
 
-func newExporterAliveness() Exporter {
+func newExporterAliveness(client *http.Client, config *RabbitExporterConfig) Exporter {
 	alivenessGaugeVecActual := alivenessGaugeVec
 
 	if len(config.ExcludeMetrics) > 0 {
@@ -52,11 +56,13 @@ func newExporterAliveness() Exporter {
 	return &exporterAliveness{
 		alivenessMetrics: alivenessGaugeVecActual,
 		alivenessInfo:    AlivenessInfo{},
+		config:           config,
+		client:           client,
 	}
 }
 
 func (e *exporterAliveness) Collect(ctx context.Context, ch chan<- prometheus.Metric) error {
-	body, contentType, err := apiRequest(config, "aliveness-test")
+	body, contentType, err := apiRequest(e.client, *e.config, "aliveness-test")
 	if err != nil {
 		return err
 	}
