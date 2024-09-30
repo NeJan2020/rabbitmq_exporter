@@ -21,6 +21,10 @@ const (
 
 var log *logrus.Logger = logrus.New()
 
+func SetLogger(l *logrus.Logger) {
+	log = l
+}
+
 func InitLogger(config *RabbitExporterConfig) *logrus.Logger {
 	logger := logrus.New()
 	logger.SetLevel(getLogLevel())
@@ -53,6 +57,7 @@ func main() {
 		panic(err)
 	}
 
+	log = InitLogger(config)
 	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 

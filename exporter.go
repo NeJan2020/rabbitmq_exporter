@@ -52,7 +52,6 @@ type Exporter interface {
 
 func NewExporter(config *RabbitExporterConfig) *RabbitMQExporter {
 	client := initClient(config)
-	log = InitLogger(config)
 	enabledExporter := make(map[string]Exporter)
 	for _, e := range config.EnabledExporters {
 		if _, ok := exporterFactories[e]; ok {
