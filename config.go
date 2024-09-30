@@ -31,7 +31,7 @@ var (
 		IncludeQueues:      regexp.MustCompile(".*"),
 		SkipVHost:          regexp.MustCompile("^$"),
 		IncludeVHost:       regexp.MustCompile(".*"),
-		RabbitCapabilities: parseCapabilities("no_sort,bert"),
+		RabbitCapabilities: ParseCapabilities("no_sort,bert"),
 		AlivenessVhost:     "/",
 		EnabledExporters:   []string{"exchange", "node", "overview", "queue"},
 		Timeout:            30,
@@ -104,7 +104,7 @@ func initConfigFromFile(configFile string) (*RabbitExporterConfig, error) {
 	config.IncludeQueues = regexp.MustCompile(config.IncludeQueuesString)
 	config.SkipVHost = regexp.MustCompile(config.SkipVHostString)
 	config.IncludeVHost = regexp.MustCompile(config.IncludeVHostString)
-	config.RabbitCapabilities = parseCapabilities(config.RabbitCapabilitiesString)
+	config.RabbitCapabilities = ParseCapabilities(config.RabbitCapabilitiesString)
 	return &config, nil
 }
 
@@ -215,7 +215,7 @@ func initConfig() *RabbitExporterConfig {
 	}
 
 	if rawCapabilities := os.Getenv("RABBIT_CAPABILITIES"); rawCapabilities != "" {
-		config.RabbitCapabilities = parseCapabilities(rawCapabilities)
+		config.RabbitCapabilities = ParseCapabilities(rawCapabilities)
 	}
 
 	if enabledExporters := os.Getenv("RABBIT_EXPORTERS"); enabledExporters != "" {
@@ -245,7 +245,7 @@ func initConfig() *RabbitExporterConfig {
 	return &config
 }
 
-func parseCapabilities(raw string) RabbitCapabilitySet {
+func ParseCapabilities(raw string) RabbitCapabilitySet {
 	result := make(RabbitCapabilitySet)
 	candidates := strings.Split(raw, ",")
 	for _, maybeCapStr := range candidates {
