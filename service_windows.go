@@ -1,7 +1,6 @@
 package rabbitmq_exporter
 
 import (
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows/svc"
 )
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -103,7 +103,7 @@ func (e *exporterOverview) Collect(ctx context.Context, ch chan<- prometheus.Met
 	log.WithField("overviewData", rabbitMqOverviewData).Debug("Overview data")
 	for key, gauge := range e.overviewMetrics {
 		if value, ok := rabbitMqOverviewData[key]; ok {
-			log.WithFields(log.Fields{"key": key, "value": value}).Debug("Set overview metric for key")
+			log.WithFields(logrus.Fields{"key": key, "value": value}).Debug("Set overview metric for key")
 			gauge.Reset()
 			gauge.WithLabelValues(e.nodeInfo.ClusterName).Set(value)
 		}

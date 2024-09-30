@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -146,7 +146,7 @@ func (e exporterQueue) Collect(ctx context.Context, ch chan<- prometheus.Metric)
 		}
 
 		if totalQueues > e.config.MaxQueues {
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"MaxQueues":   e.config.MaxQueues,
 				"TotalQueues": totalQueues,
 			}).Debug("MaxQueues exceeded.")

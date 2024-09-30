@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	bert "github.com/kbudde/gobert"
-	log "github.com/sirupsen/logrus"
 )
 
 // rabbitBERTReply (along with its RabbitReply interface

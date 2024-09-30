@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type rabbitJSONReply struct {
@@ -43,7 +43,7 @@ func (rep *rabbitJSONReply) MakeStatsInfo(labels []string) []StatsInfo {
 			field = "id"
 		}
 		if field != "" {
-			log.WithFields(log.Fields{"element": el, "vhost": el["vhost"], field: el[field]}).Debug("Iterate over array")
+			log.WithFields(logrus.Fields{"element": el, "vhost": el["vhost"], field: el[field]}).Debug("Iterate over array")
 			statsinfo := StatsInfo{}
 			statsinfo.labels = make(map[string]string)
 

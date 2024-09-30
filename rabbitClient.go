@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func initClient(config *RabbitExporterConfig) *http.Client {
@@ -72,7 +72,7 @@ func apiRequest(client *http.Client, config RabbitExporterConfig, endpoint strin
 
 	req, err := http.NewRequest("GET", config.RabbitURL+"/api/"+endpoint+args, nil)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err, "host": config.RabbitURL}).Error("Error while constructing rabbitHost request")
+		log.WithFields(logrus.Fields{"error": err, "host": config.RabbitURL}).Error("Error while constructing rabbitHost request")
 		return nil, "", errors.New("Error while constructing rabbitHost request")
 	}
 
@@ -86,7 +86,7 @@ func apiRequest(client *http.Client, config RabbitExporterConfig, endpoint strin
 		if resp != nil {
 			status = resp.StatusCode
 		}
-		log.WithFields(log.Fields{"error": err, "host": config.RabbitURL, "statusCode": status}).Error("Error while retrieving data from rabbitHost")
+		log.WithFields(logrus.Fields{"error": err, "host": config.RabbitURL, "statusCode": status}).Error("Error while retrieving data from rabbitHost")
 		return nil, "", errors.New("Error while retrieving data from rabbitHost")
 	}
 
@@ -96,7 +96,7 @@ func apiRequest(client *http.Client, config RabbitExporterConfig, endpoint strin
 	if err != nil {
 		return nil, "", err
 	}
-	log.WithFields(log.Fields{"body": string(body), "endpoint": endpoint}).Debug("Metrics loaded")
+	log.WithFields(logrus.Fields{"body": string(body), "endpoint": endpoint}).Debug("Metrics loaded")
 
 	return body, content, nil
 }

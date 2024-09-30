@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -88,7 +88,7 @@ func (e *exporterAliveness) Collect(ctx context.Context, ch chan<- prometheus.Me
 	log.WithField("alivenesswData", rabbitMqAlivenessData).Debug("Aliveness data")
 	for key, gauge := range e.alivenessMetrics {
 		if value, ok := rabbitMqAlivenessData[key]; ok {
-			log.WithFields(log.Fields{"key": key, "value": value}).Debug("Set aliveness metric for key")
+			log.WithFields(logrus.Fields{"key": key, "value": value}).Debug("Set aliveness metric for key")
 			gauge.WithLabelValues(e.alivenessInfo.Status).Set(value)
 		}
 	}

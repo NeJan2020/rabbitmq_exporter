@@ -12,21 +12,26 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	defaultLogLevel = log.InfoLevel
+	defaultLogLevel = logrus.InfoLevel
 )
 
-func initLogger(config *RabbitExporterConfig) {
-	log.SetLevel(getLogLevel())
+var log *logrus.Logger = logrus.New()
+
+func InitLogger(config *RabbitExporterConfig) *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(getLogLevel())
 	if strings.ToUpper(config.OutputFormat) == "JSON" {
-		log.SetFormatter(&log.JSONFormatter{})
+		logger.SetFormatter(&logrus.JSONFormatter{})
 	} else {
 		// The TextFormatter is default, you don't actually have to do this.
-		log.SetFormatter(&log.TextFormatter{})
+		logger.SetFormatter(&logrus.TextFormatter{})
 	}
+
+	return logger
 }
 
 func main() {
@@ -48,11 +53,10 @@ func main() {
 		panic(err)
 	}
 
-	initLogger(config)
 	exporter := NewExporter(config)
 	prometheus.MustRegister(exporter)
 
-	log.WithFields(log.Fields{
+	log.WithFields(logrus.Fields{
 		"VERSION":    Version,
 		"REVISION":   Revision,
 		"BRANCH":     Branch,
@@ -60,7 +64,7 @@ func main() {
 		//		"RABBIT_PASSWORD": config.RABBIT_PASSWORD,
 	}).Info("Starting RabbitMQ exporter")
 
-	log.WithFields(log.Fields{
+	log.WithFields(logrus.Fields{
 		"PUBLISH_ADDR":        config.PublishAddr,
 		"PUBLISH_PORT":        config.PublishPort,
 		"RABBIT_URL":          config.RabbitURL,
@@ -122,9 +126,9 @@ func main() {
 	cancel()
 }
 
-func getLogLevel() log.Level {
+func getLogLevel() logrus.Level {
 	lvl := strings.ToLower(os.Getenv("LOG_LEVEL"))
-	level, err := log.ParseLevel(lvl)
+	level, err := logrus.ParseLevel(lvl)
 	if err != nil {
 		level = defaultLogLevel
 	}
