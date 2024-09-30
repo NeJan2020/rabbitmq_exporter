@@ -1,10 +1,11 @@
-package main
+package rabbitmq_exporter
 
 import (
+	"io"
+
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 )
 
 func init() {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 }

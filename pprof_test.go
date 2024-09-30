@@ -1,7 +1,7 @@
 //go:build pprof
 // +build pprof
 
-package main
+package rabbitmq_exporter
 
 import (
 	"fmt"

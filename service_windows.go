@@ -1,4 +1,4 @@
-package main
+package rabbitmq_exporter
 
 import (
 	log "github.com/sirupsen/logrus"

@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package main
+package rabbitmq_exporter
 
 import (
 	"fmt"

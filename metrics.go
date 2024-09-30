@@ -1,4 +1,4 @@
-package main
+package rabbitmq_exporter
 
 import "github.com/prometheus/client_golang/prometheus"
 

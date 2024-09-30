@@ -1,9 +1,9 @@
-package main
+package rabbitmq_exporter
 
-//MetricMap maps name to float64 metric
+// MetricMap maps name to float64 metric
 type MetricMap map[string]float64
 
-//StatsInfo describes  one statistic (queue or exchange): its name, vhost it belongs to, and all associated metrics.
+// StatsInfo describes  one statistic (queue or exchange): its name, vhost it belongs to, and all associated metrics.
 type StatsInfo struct {
 	labels  map[string]string
 	metrics MetricMap

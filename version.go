@@ -1,4 +1,4 @@
-package main
+package rabbitmq_exporter
 
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -13,7 +13,7 @@ var (
 	BuildDate string
 )
 
-//BuildInfo is a metric with a constant '1' value labeled by version, revision, branch and build date on which the rabbitmq_exporter was built
+// BuildInfo is a metric with a constant '1' value labeled by version, revision, branch and build date on which the rabbitmq_exporter was built
 var BuildInfo *prometheus.GaugeVec
 
 func init() {

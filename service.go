@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-package main
+package rabbitmq_exporter
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-//runService wait for os interrupt
+// runService wait for os interrupt
 func runService() chan bool {
 	waitChan := make(chan bool)
 

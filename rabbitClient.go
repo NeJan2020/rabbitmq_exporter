@@ -1,4 +1,4 @@
-package main
+package rabbitmq_exporter
 
 import (
 	"crypto/tls"
