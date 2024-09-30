@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kbudde/rabbitmq_exporter/testenv"
+	"github.com/NeJan2020/rabbitmq_exporter/testenv"
 )
 
 func TestPProf(t *testing.T) {
