@@ -167,7 +167,7 @@ func assertNoSortRespected(t *testing.T, enabled bool) {
 
 	config := &RabbitExporterConfig{
 		RabbitURL:          server.URL,
-		RabbitCapabilities: rabbitCapabilitySet{rabbitCapNoSort: enabled},
+		RabbitCapabilities: RabbitCapabilitySet{rabbitCapNoSort: enabled},
 	}
 
 	client := initClient(config)

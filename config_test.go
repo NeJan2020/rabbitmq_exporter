@@ -160,7 +160,7 @@ func TestConfig_Capabilities(t *testing.T) {
 	for _, cap := range needToSupport {
 		os.Setenv("RABBIT_CAPABILITIES", "junk_cap, another_with_spaces_around ,  "+string(cap)+", done")
 		initConfig()
-		expected := rabbitCapabilitySet{cap: true}
+		expected := RabbitCapabilitySet{cap: true}
 		if !reflect.DeepEqual(config.RabbitCapabilities, expected) {
 			t.Errorf("Capability '%s' wasn't properly detected from env", cap)
 		}
@@ -168,7 +168,7 @@ func TestConfig_Capabilities(t *testing.T) {
 	//disable all capabilities
 	os.Setenv("RABBIT_CAPABILITIES", " ")
 	initConfig()
-	expected := rabbitCapabilitySet{}
+	expected := RabbitCapabilitySet{}
 	if !reflect.DeepEqual(config.RabbitCapabilities, expected) {
 		t.Errorf("Capabilities '%v' should be empty", config.RabbitCapabilities)
 	}

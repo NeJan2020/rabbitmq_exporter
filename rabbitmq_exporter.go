@@ -131,7 +131,7 @@ func getLogLevel() log.Level {
 	return level
 }
 
-func formatCapabilities(caps rabbitCapabilitySet) string {
+func formatCapabilities(caps RabbitCapabilitySet) string {
 	var buffer bytes.Buffer
 	first := true
 	for k := range caps {

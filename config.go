@@ -65,7 +65,7 @@ type RabbitExporterConfig struct {
 	SkipVHostString          string              `json:"skip_vhost"`
 	IncludeVHostString       string              `json:"include_vhost"`
 	RabbitCapabilitiesString string              `json:"rabbit_capabilities"`
-	RabbitCapabilities       rabbitCapabilitySet `json:"-"`
+	RabbitCapabilities       RabbitCapabilitySet `json:"-"`
 	AlivenessVhost           string              `json:"aliveness_vhost"`
 	EnabledExporters         []string            `json:"enabled_exporters"`
 	Timeout                  int                 `json:"timeout"`
@@ -73,14 +73,14 @@ type RabbitExporterConfig struct {
 }
 
 type rabbitCapability string
-type rabbitCapabilitySet map[rabbitCapability]bool
+type RabbitCapabilitySet map[rabbitCapability]bool
 
 const (
 	rabbitCapNoSort rabbitCapability = "no_sort"
 	rabbitCapBert   rabbitCapability = "bert"
 )
 
-var allRabbitCapabilities = rabbitCapabilitySet{
+var allRabbitCapabilities = RabbitCapabilitySet{
 	rabbitCapNoSort: true,
 	rabbitCapBert:   true,
 }
@@ -245,8 +245,8 @@ func initConfig() *RabbitExporterConfig {
 	return &config
 }
 
-func parseCapabilities(raw string) rabbitCapabilitySet {
-	result := make(rabbitCapabilitySet)
+func parseCapabilities(raw string) RabbitCapabilitySet {
+	result := make(RabbitCapabilitySet)
 	candidates := strings.Split(raw, ",")
 	for _, maybeCapStr := range candidates {
 		maybeCap := rabbitCapability(strings.TrimSpace(maybeCapStr))
