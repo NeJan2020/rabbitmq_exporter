@@ -85,7 +85,7 @@ func (e *RabbitMQExporter) Describe(ch chan<- *prometheus.Desc) {
 	e.upMetric.Describe(ch)
 	e.endpointUpMetric.Describe(ch)
 	e.endpointScrapeDurationMetric.Describe(ch)
-	BuildInfo.Describe(ch)
+	// BuildInfo.Describe(ch)
 }
 
 func (e *RabbitMQExporter) Collect(ch chan<- prometheus.Metric) {
@@ -110,7 +110,7 @@ func (e *RabbitMQExporter) Collect(ch chan<- prometheus.Metric) {
 			allUp = false
 		}
 	}
-	BuildInfo.Collect(ch)
+	// BuildInfo.Collect(ch)
 
 	if allUp {
 		e.upMetric.WithLabelValues(e.overviewExporter.NodeInfo().ClusterName, e.overviewExporter.NodeInfo().Node).Set(1)
